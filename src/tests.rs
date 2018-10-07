@@ -125,3 +125,32 @@ fn test_symmetric_difference() {
         }
     }
 }
+
+#[test]
+fn test_combine() {
+    use std::cmp::Ordering;
+
+    #[derive(Debug, Eq, PartialEq)]
+    enum Foo {
+        Zero,
+        Some(Vec<u32>),
+    }
+
+    fn combine(l: &mut Foo, r: &mut Foo) -> Ordering {
+        match (l, r) {
+            (Foo::Zero, Foo::Zero) => Ordering::Equal,
+            (Foo::Zero, Foo::Some(_)) => Ordering::Less,
+            (Foo::Some(_), Foo::Zero) => Ordering::Greater,
+            (Foo::Some(l), Foo::Some(r)) => {
+                l.append(r);
+                Ordering::Equal
+            }
+        }
+    }
+
+    let lhs = vec![Foo::Zero, Foo::Some(vec![1, 2])];
+    let rhs = vec![Foo::Some(vec![3])];
+
+    let union: Vec<_> = union_by(lhs, rhs, combine).collect();
+    assert_eq!(union, vec![Foo::Zero, Foo::Some(vec![1, 2, 3])]);
+}

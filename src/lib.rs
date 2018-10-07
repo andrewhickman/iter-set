@@ -7,7 +7,6 @@
 mod tests;
 
 use std::cmp::{self, Ordering};
-use std::iter::Peekable;
 
 /// Compare two sets represented by sorted, deduplicated iterators.
 ///
@@ -46,7 +45,7 @@ pub fn cmp_by<T, L, R, F>(a: L, b: R, cmp: F) -> Option<Ordering>
 where
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
-    F: FnMut(&T, &T) -> Ordering,
+    F: FnMut(&mut T, &mut T) -> Ordering,
 {
     classify_by(a, b, cmp).try_fold(Ordering::Equal, cmp_fold)
 }
@@ -64,7 +63,7 @@ fn cmp_fold<T>(init: Ordering, (next, _): (Ordering, T)) -> Option<Ordering> {
 
 /// Take the union of two sets represented by sorted, deduplicated iterators.
 ///
-/// If an elements is in both iterators, then only the one from `b` is yielded.
+/// If an elements is in both iterators, then only the one from `a` is yielded.
 ///
 /// Time complexity: `O(a.len() + b.len())`.
 pub fn union<T, L, R>(a: L, b: R) -> impl Iterator<Item = T>
@@ -84,7 +83,7 @@ pub fn union_by<T, L, R, F>(a: L, b: R, cmp: F) -> impl Iterator<Item = T>
 where
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
-    F: FnMut(&T, &T) -> Ordering,
+    F: FnMut(&mut T, &mut T) -> Ordering,
 {
     classify_by(a, b, cmp).map(|(_, val)| val)
 }
@@ -105,6 +104,8 @@ where
 
 /// Take the intersection of two sets represented by sorted, deduplicated iterators.
 ///
+/// The elements returned will all be from `a`.
+///
 /// Time complexity: `O(a.len() + b.len())`.
 pub fn intersection<T, L, R>(a: L, b: R) -> impl Iterator<Item = T>
 where
@@ -122,7 +123,7 @@ pub fn intersection_by<T, L, R, F>(a: L, b: R, cmp: F) -> impl Iterator<Item = T
 where
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
-    F: FnMut(&T, &T) -> Ordering,
+    F: FnMut(&mut T, &mut T) -> Ordering,
 {
     classify_by(a, b, cmp).filter_map(intersection_filter)
 }
@@ -168,7 +169,7 @@ pub fn difference_by<T, L, R, F>(a: L, b: R, cmp: F) -> impl Iterator<Item = T>
 where
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
-    F: FnMut(&T, &T) -> Ordering,
+    F: FnMut(&mut T, &mut T) -> Ordering,
 {
     classify_by(a, b, cmp).filter_map(difference_filter)
 }
@@ -213,7 +214,7 @@ pub fn symmetric_difference_by<T, L, R, F>(a: L, b: R, cmp: F) -> impl Iterator<
 where
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
-    F: FnMut(&T, &T) -> Ordering,
+    F: FnMut(&mut T, &mut T) -> Ordering,
 {
     classify_by(a, b, cmp).filter_map(symmetric_difference_filter)
 }
@@ -254,7 +255,7 @@ fn classify<T: Ord>(
 fn classify_by<T>(
     lhs: impl IntoIterator<Item = T>,
     rhs: impl IntoIterator<Item = T>,
-    cmp: impl FnMut(&T, &T) -> Ordering,
+    cmp: impl FnMut(&mut T, &mut T) -> Ordering,
 ) -> impl Iterator<Item = (Ordering, T)> {
     ClassifyBy {
         inner: Classify::new(lhs, rhs),
@@ -289,14 +290,14 @@ where
         rhs: impl IntoIterator<IntoIter = R, Item = T>,
     ) -> Self {
         Classify {
-            lhs: lhs.into_iter().peekable(),
-            rhs: rhs.into_iter().peekable(),
+            lhs: Peekable::new(lhs.into_iter()),
+            rhs: Peekable::new(rhs.into_iter()),
         }
     }
 
     fn next_by<F>(&mut self, mut cmp: F) -> Option<(Ordering, T)>
     where
-        F: FnMut(&T, &T) -> Ordering,
+        F: FnMut(&mut T, &mut T) -> Ordering,
     {
         use Ordering::*;
 
@@ -308,11 +309,11 @@ where
         };
 
         let val = match src {
-            Ordering::Greater => self.lhs.next(),
-            Ordering::Less => self.rhs.next(),
+            Ordering::Greater => self.lhs.peek.take(),
+            Ordering::Less => self.rhs.peek.take(),
             Ordering::Equal => {
-                self.lhs.next();
-                self.rhs.next()
+                self.rhs.peek.take();
+                self.lhs.peek.take()
             }
         };
 
@@ -320,8 +321,8 @@ where
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let (lmin, lmax) = self.lhs.size_hint();
-        let (rmin, rmax) = self.rhs.size_hint();
+        let (lmin, lmax) = self.lhs.iter.size_hint();
+        let (rmin, rmax) = self.rhs.iter.size_hint();
         let min = cmp::max(lmin, rmin);
         let max = match (lmax, rmax) {
             (Some(lmax), Some(rmax)) => lmax.checked_add(rmax),
@@ -340,7 +341,7 @@ where
     type Item = (Ordering, T);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.next_by(Ord::cmp)
+        self.next_by(|l, r| Ord::cmp(l, r))
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -361,7 +362,7 @@ impl<T, L, R, F> Iterator for ClassifyBy<L, R, F>
 where
     L: Iterator<Item = T>,
     R: Iterator<Item = T>,
-    F: FnMut(&T, &T) -> Ordering,
+    F: FnMut(&mut T, &mut T) -> Ordering,
 {
     type Item = (Ordering, T);
 
@@ -371,5 +372,23 @@ where
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.inner.size_hint()
+    }
+}
+
+struct Peekable<I: Iterator> {
+    iter: I,
+    peek: Option<I::Item>,
+}
+
+impl<I: Iterator> Peekable<I> {
+    fn new(iter: I) -> Self {
+        Peekable { iter, peek: None }
+    }
+
+    fn peek(&mut self) -> Option<&mut I::Item> {
+        if self.peek.is_none() {
+            self.peek = self.iter.next();
+        }
+        self.peek.as_mut()
     }
 }
