@@ -31,7 +31,6 @@ where
 /// See [`cmp`](fn.cmp.html).
 pub fn cmp_by_key<T, L, R, K, F>(a: L, b: R, key: F) -> Option<Ordering>
 where
-    T: Ord,
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
     K: Ord,
@@ -45,7 +44,6 @@ where
 /// See [`cmp`](fn.cmp.html).
 pub fn cmp_by<T, L, R, F>(a: L, b: R, cmp: F) -> Option<Ordering>
 where
-    T: Ord,
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
     F: FnMut(&T, &T) -> Ordering,
@@ -84,7 +82,6 @@ where
 /// See [`union`](fn.union.html).
 pub fn union_by<T, L, R, F>(a: L, b: R, cmp: F) -> impl Iterator<Item = T>
 where
-    T: Ord,
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
     F: FnMut(&T, &T) -> Ordering,
@@ -98,7 +95,6 @@ where
 /// See [`union`](fn.union.html).
 pub fn union_by_key<T, L, R, K, F>(a: L, b: R, key: F) -> impl Iterator<Item = T>
 where
-    T: Ord,
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
     K: Ord,
@@ -124,7 +120,6 @@ where
 /// See [`intersection`](fn.intersection.html).
 pub fn intersection_by<T, L, R, F>(a: L, b: R, cmp: F) -> impl Iterator<Item = T>
 where
-    T: Ord,
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
     F: FnMut(&T, &T) -> Ordering,
@@ -138,7 +133,6 @@ where
 /// See [`intersection`](fn.intersection.html).
 pub fn intersection_by_key<T, L, R, K, F>(a: L, b: R, key: F) -> impl Iterator<Item = T>
 where
-    T: Ord,
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
     K: Ord,
@@ -172,7 +166,6 @@ where
 /// See [`difference`](fn.intersection.html).
 pub fn difference_by<T, L, R, F>(a: L, b: R, cmp: F) -> impl Iterator<Item = T>
 where
-    T: Ord,
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
     F: FnMut(&T, &T) -> Ordering,
@@ -186,7 +179,6 @@ where
 /// See [`difference`](fn.intersection.html).
 pub fn difference_by_key<T, L, R, K, F>(a: L, b: R, key: F) -> impl Iterator<Item = T>
 where
-    T: Ord,
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
     K: Ord,
@@ -219,7 +211,6 @@ where
 /// See [`symmetric_difference`](fn.intersection.html).
 pub fn symmetric_difference_by<T, L, R, F>(a: L, b: R, cmp: F) -> impl Iterator<Item = T>
 where
-    T: Ord,
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
     F: FnMut(&T, &T) -> Ordering,
@@ -233,7 +224,6 @@ where
 /// See [`symmetric_difference`](fn.intersection.html).
 pub fn symmetric_difference_by_key<T, L, R, K, F>(a: L, b: R, key: F) -> impl Iterator<Item = T>
 where
-    T: Ord,
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
     K: Ord,
@@ -261,7 +251,7 @@ fn classify<T: Ord>(
     Classify::new(lhs, rhs)
 }
 
-fn classify_by<T: Ord>(
+fn classify_by<T>(
     lhs: impl IntoIterator<Item = T>,
     rhs: impl IntoIterator<Item = T>,
     cmp: impl FnMut(&T, &T) -> Ordering,
@@ -272,7 +262,7 @@ fn classify_by<T: Ord>(
     }
 }
 
-fn classify_by_key<T: Ord, K: Ord>(
+fn classify_by_key<T, K: Ord>(
     lhs: impl IntoIterator<Item = T>,
     rhs: impl IntoIterator<Item = T>,
     mut key: impl FnMut(&T) -> K,
@@ -328,6 +318,17 @@ where
 
         val.map(|v| (src, v))
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let (lmin, lmax) = self.lhs.size_hint();
+        let (rmin, rmax) = self.rhs.size_hint();
+        let min = cmp::max(lmin, rmin);
+        let max = match (lmax, rmax) {
+            (Some(lmax), Some(rmax)) => lmax.checked_add(rmax),
+            _ => None,
+        };
+        (min, max)
+    }
 }
 
 impl<T, L, R> Iterator for Classify<L, R>
@@ -343,14 +344,7 @@ where
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let (lmin, lmax) = self.lhs.size_hint();
-        let (rmin, rmax) = self.rhs.size_hint();
-        let min = cmp::max(lmin, rmin);
-        let max = match (lmax, rmax) {
-            (Some(lmax), Some(rmax)) => lmax.checked_add(rmax),
-            _ => None,
-        };
-        (min, max)
+        self.size_hint()
     }
 }
 
@@ -365,7 +359,6 @@ where
 
 impl<T, L, R, F> Iterator for ClassifyBy<L, R, F>
 where
-    T: Ord,
     L: Iterator<Item = T>,
     R: Iterator<Item = T>,
     F: FnMut(&T, &T) -> Ordering,
