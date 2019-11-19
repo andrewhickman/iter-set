@@ -1,3 +1,5 @@
+#![deny(missing_debug_implementations, missing_copy_implementations)]
+
 //! This crate provides set operations on sorted, deduplicated iterators. Unless otherwise
 //! specified, all iterator parameters in this crate should yield elements in ascending order with
 //! consecutive repeated elements removed. If this is upheld, then all iterators returned by this
@@ -7,6 +9,7 @@
 mod tests;
 
 use std::cmp::{self, Ordering};
+use std::fmt::{self, Debug};
 
 /// Compare two sets represented by sorted, deduplicated iterators.
 ///
@@ -244,38 +247,56 @@ fn symmetric_difference_filter<T>((src, val): (Ordering, T)) -> Option<T> {
     }
 }
 
-/// Interleave two sorted iterators in sorted order and classify each element with its
-/// source.
-/// `Ordering::Less` - from `rhs`.
-/// `Ordering::Equal`- from both `lhs` and `rhs`.
-/// `Ordering::Greater` - from `lhs`.
-fn classify<T: Ord>(
-    lhs: impl IntoIterator<Item = T>,
-    rhs: impl IntoIterator<Item = T>,
-) -> impl Iterator<Item = (Ordering, T)> {
-    Classify::new(lhs, rhs)
+/// Interleave two sorted, deduplicated iterators in sorted order and classify each element according
+/// to its source:
+/// * `Ordering::Less`: from `a`.
+/// * `Ordering::Equal`: from both `a` and `b`. (The element from `a` is returned)
+/// * `Ordering::Greater`: from `b`.
+pub fn classify<T, L, R>(a: L, b: R) -> Classify<L::IntoIter, R::IntoIter>
+where
+    T: Ord,
+    L: IntoIterator<Item = T>,
+    R: IntoIterator<Item = T>,
+{
+    Classify::new(a, b)
 }
 
-fn classify_by<T>(
-    lhs: impl IntoIterator<Item = T>,
-    rhs: impl IntoIterator<Item = T>,
-    cmp: impl FnMut(&mut T, &mut T) -> Ordering,
-) -> impl Iterator<Item = (Ordering, T)> {
+/// Interleave two sorted, deduplicated iterators in sorted order and classify each element according
+/// to its source, using a comparator function.
+///
+/// See [`classify`](fn.classify.html).
+pub fn classify_by<T, L, R, F>(a: L, b: R, cmp: F) -> ClassifyBy<L::IntoIter, R::IntoIter, F>
+where
+    L: IntoIterator<Item = T>,
+    R: IntoIterator<Item = T>,
+    F: FnMut(&mut T, &mut T) -> Ordering,
+{
     ClassifyBy {
-        inner: Classify::new(lhs, rhs),
+        inner: Classify::new(a, b),
         cmp,
     }
 }
 
-fn classify_by_key<T, K: Ord>(
-    lhs: impl IntoIterator<Item = T>,
-    rhs: impl IntoIterator<Item = T>,
-    mut key: impl FnMut(&T) -> K,
-) -> impl Iterator<Item = (Ordering, T)> {
-    classify_by(lhs, rhs, move |l, r| Ord::cmp(&key(l), &key(r)))
+/// Interleave two sorted, deduplicated iterators in sorted order and classify each element according
+/// to its source, using a key extraction function.
+///
+/// See [`classify`](fn.classify.html).
+pub fn classify_by_key<T, L, R, K, F>(a: L, b: R, mut key: F) -> impl Iterator<Item = (Ordering, T)>
+where
+    L: IntoIterator<Item = T>,
+    R: IntoIterator<Item = T>,
+    K: Ord,
+    F: FnMut(&T) -> K,
+{
+    classify_by(a, b, move |l, r| Ord::cmp(&key(l), &key(r)))
 }
 
-struct Classify<L, R>
+/// An iterator that interleaves two sorted, deduplicated iterators in sorted order and classifies
+/// each element according to its source.
+///
+/// This `struct` is created by the [`classify`](fn.classify.html) function. See its documentation
+/// for more.
+pub struct Classify<L, R>
 where
     L: Iterator,
     R: Iterator,
@@ -353,7 +374,15 @@ where
     }
 }
 
-struct ClassifyBy<L, R, F>
+/// An iterator that interleaves two sorted, deduplicated iterators in sorted order and classifies
+/// each element according to its source, using a comparator function.
+///
+/// This `struct` is created by the [`classify_by`] and [`classify_by_key`] functions. See their
+/// documentation for more.
+///
+/// [`classify_by`]: fn.classify_by.html
+/// [`classify_by_key`]: fn.classify_by_key.html
+pub struct ClassifyBy<L, R, F>
 where
     L: Iterator,
     R: Iterator,
@@ -394,5 +423,31 @@ impl<I: Iterator> Peekable<I> {
             self.peek = self.iter.next();
         }
         self.peek.as_mut()
+    }
+}
+
+impl<L, R> Debug for Classify<L, R>
+where
+    L: Debug + Iterator,
+    R: Debug + Iterator,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Classify")
+            .field("lhs", &self.lhs.iter)
+            .field("rhs", &self.rhs.iter)
+            .finish()
+    }
+}
+
+impl<L, R, F> Debug for ClassifyBy<L, R, F>
+where
+    L: Debug + Iterator,
+    R: Debug + Iterator,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("ClassifyBy")
+            .field("lhs", &self.inner.lhs.iter)
+            .field("rhs", &self.inner.rhs.iter)
+            .finish()
     }
 }
