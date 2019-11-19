@@ -281,14 +281,21 @@ where
 /// to its source, using a key extraction function.
 ///
 /// See [`classify`](fn.classify.html).
-pub fn classify_by_key<T, L, R, K, F>(a: L, b: R, mut key: F) -> impl Iterator<Item = (Ordering, T)>
+pub fn classify_by_key<T, L, R, K, F>(
+    a: L,
+    b: R,
+    key: F,
+) -> ClassifyByKey<L::IntoIter, R::IntoIter, F>
 where
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
     K: Ord,
     F: FnMut(&T) -> K,
 {
-    classify_by(a, b, move |l, r| Ord::cmp(&key(l), &key(r)))
+    ClassifyByKey {
+        inner: Classify::new(a, b),
+        key,
+    }
 }
 
 /// An iterator that interleaves two sorted, deduplicated iterators in sorted order and classifies
@@ -377,11 +384,8 @@ where
 /// An iterator that interleaves two sorted, deduplicated iterators in sorted order and classifies
 /// each element according to its source, using a comparator function.
 ///
-/// This `struct` is created by the [`classify_by`] and [`classify_by_key`] functions. See their
+/// This `struct` is created by the [`classify_by`](fn.classify_by.html) function. See its
 /// documentation for more.
-///
-/// [`classify_by`]: fn.classify_by.html
-/// [`classify_by_key`]: fn.classify_by_key.html
 pub struct ClassifyBy<L, R, F>
 where
     L: Iterator,
@@ -401,6 +405,39 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next_by(&mut self.cmp)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+
+/// An iterator that interleaves two sorted, deduplicated iterators in sorted order and classifies
+/// each element according to its source, using a key extraction function.
+///
+/// This `struct` is created by the [`classify_by_key`](fn.classify_by_key.html) function. See its
+/// documentation for more.
+pub struct ClassifyByKey<L, R, F>
+where
+    L: Iterator,
+    R: Iterator,
+{
+    inner: Classify<L, R>,
+    key: F,
+}
+
+impl<T, L, R, K, F> Iterator for ClassifyByKey<L, R, F>
+where
+    L: Iterator<Item = T>,
+    R: Iterator<Item = T>,
+    K: Ord,
+    F: FnMut(&T) -> K,
+{
+    type Item = (Ordering, T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let key = &mut self.key;
+        self.inner.next_by(|l, r| Ord::cmp(&key(l), &key(r)))
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -440,6 +477,19 @@ where
 }
 
 impl<L, R, F> Debug for ClassifyBy<L, R, F>
+where
+    L: Debug + Iterator,
+    R: Debug + Iterator,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("ClassifyBy")
+            .field("lhs", &self.inner.lhs.iter)
+            .field("rhs", &self.inner.rhs.iter)
+            .finish()
+    }
+}
+
+impl<L, R, F> Debug for ClassifyByKey<L, R, F>
 where
     L: Debug + Iterator,
     R: Debug + Iterator,
