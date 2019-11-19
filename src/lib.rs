@@ -63,7 +63,8 @@ fn cmp_fold<T>(init: Ordering, (next, _): (Ordering, T)) -> Option<Ordering> {
 
 /// Take the union of two sets represented by sorted, deduplicated iterators.
 ///
-/// If an elements is in both iterators, then only the one from `a` is yielded.
+/// If an element is in both iterators, then only the one from `a` is yielded.
+/// This behaviour can be overridden by using [`union_by`](fn.union_by.html).
 ///
 /// Time complexity: `O(a.len() + b.len())`.
 pub fn union<T, L, R>(a: L, b: R) -> impl Iterator<Item = T>
@@ -77,6 +78,9 @@ where
 
 /// Take the union of two sets represented by sorted, deduplicated iterators, using a comparator
 /// function.
+///
+/// Note that since this passes elements to the comparator function as `&mut T`, you can swap them
+/// to override the default behaviour of returning duplicate elements from `a`.
 ///
 /// See [`union`](fn.union.html).
 pub fn union_by<T, L, R, F>(a: L, b: R, cmp: F) -> impl Iterator<Item = T>
