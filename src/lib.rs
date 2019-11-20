@@ -692,7 +692,7 @@ where
     R: Debug + Iterator,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("ClassifyBy")
+        f.debug_struct("ClassifyByKey")
             .field("lhs", &self.inner.lhs.iter)
             .field("rhs", &self.inner.rhs.iter)
             .finish()
