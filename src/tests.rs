@@ -1,3 +1,6 @@
+use std::prelude::v1::*;
+use std::vec;
+
 use super::*;
 
 const BITS: u32 = 8;

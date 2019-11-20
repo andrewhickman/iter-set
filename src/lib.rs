@@ -1,3 +1,4 @@
+#![no_std]
 #![deny(missing_debug_implementations, missing_copy_implementations)]
 
 //! This crate provides set operations on sorted, deduplicated iterators. Unless otherwise
@@ -6,10 +7,13 @@
 //! crate will share those properties.
 
 #[cfg(test)]
+extern crate std;
+
+#[cfg(test)]
 mod tests;
 
-use std::cmp::{self, Ordering};
-use std::fmt::{self, Debug};
+use core::cmp::{self, Ordering};
+use core::fmt::{self, Debug};
 
 /// Compare two sets represented by sorted, deduplicated iterators.
 ///
