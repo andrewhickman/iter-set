@@ -434,9 +434,9 @@ fn symmetric_difference_filter<T>((src, val): (Ordering, T)) -> Option<T> {
 
 /// Interleave two sorted, deduplicated iterators in sorted order and classify each element according
 /// to its source:
-/// * `Ordering::Less`: from `a`.
+/// * `Ordering::Less`: from `b`.
 /// * `Ordering::Equal`: from both `a` and `b`. (The element from `a` is returned)
-/// * `Ordering::Greater`: from `b`.
+/// * `Ordering::Greater`: from `a`.
 ///
 /// # Examples
 ///
