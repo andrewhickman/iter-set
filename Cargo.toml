@@ -1,11 +1,13 @@
 [package]
 name = "iter-set"
 description = "Set operations on sorted, deduplicated iterators."
-version = "0.2.0"
+version = "1.0.0"
+html_root_url = "https://docs.rs/iter-set/1.0.0"
 authors = ["Andrew Hickman <andrew.hickman1@sky.com>"]
 repository = "https://github.com/andrewhickman/iter-set"
 documentation = "https://docs.rs/iter-set"
 license = "MIT/Apache-2.0"
 readme = "README.md"
+categories = ["algorithms", "data-structures", "no-std"]
 
 [dependencies]
