@@ -19,6 +19,22 @@ use std::fmt::{self, Debug};
 /// the return value is unspecified.
 ///
 /// Time complexity: `O(a.len() + b.len())`.
+///
+/// # Examples
+///
+/// ```
+/// use std::cmp::Ordering::{Equal, Greater, Less};
+/// use iter_set::cmp;
+///
+/// let a = [1, 2, 3];
+/// let b = [2, 3];
+/// let c = [2, 3, 4];
+///
+/// assert_eq!(cmp(&a, &b), Some(Greater));
+/// assert_eq!(cmp(&b, &b), Some(Equal));
+/// assert_eq!(cmp(&b, &c), Some(Less));
+/// assert_eq!(cmp(&a, &c), None);
+/// ```
 pub fn cmp<T, L, R>(a: L, b: R) -> Option<Ordering>
 where
     T: Ord,
@@ -31,6 +47,22 @@ where
 /// Compare two sets represented by sorted, deduplicated iterators, using a key extraction function.
 ///
 /// See [`cmp`](fn.cmp.html).
+///
+/// # Examples
+///
+/// ```
+/// use std::cmp::Ordering::{Equal, Greater, Less};
+/// use iter_set::cmp_by_key;
+///
+/// let a = [(1, "a"), (2, "b"), (3, "c")];
+/// let b = [(2, "d"), (3, "a")];
+/// let c = [(2, "b"), (3, "c"), (4, "d")];
+///
+/// assert_eq!(cmp_by_key(&a, &b, |&(key, _)| key), Some(Greater));
+/// assert_eq!(cmp_by_key(&b, &b, |&(key, _)| key), Some(Equal));
+/// assert_eq!(cmp_by_key(&b, &c, |&(key, _)| key), Some(Less));
+/// assert_eq!(cmp_by_key(&a, &c, |&(key, _)| key), None);
+/// ```
 pub fn cmp_by_key<T, L, R, K, F>(a: L, b: R, key: F) -> Option<Ordering>
 where
     L: IntoIterator<Item = T>,
@@ -44,6 +76,24 @@ where
 /// Compare two sets represented by sorted, deduplicated iterators, using a comparator function.
 ///
 /// See [`cmp`](fn.cmp.html).
+///
+/// # Examples
+///
+/// Using a custom comparator to reverse the ordering
+///
+/// ```
+/// use std::cmp::Ordering::{Equal, Greater, Less};
+/// use iter_set::cmp_by;
+///
+/// let a = [3, 2, 1];
+/// let b = [3, 2];
+/// let c = [4, 3, 2];
+///
+/// assert_eq!(cmp_by(&a, &b, |l, r| Ord::cmp(r, l)), Some(Greater));
+/// assert_eq!(cmp_by(&b, &b, |l, r| Ord::cmp(r, l)), Some(Equal));
+/// assert_eq!(cmp_by(&b, &c, |l, r| Ord::cmp(r, l)), Some(Less));
+/// assert_eq!(cmp_by(&a, &c, |l, r| Ord::cmp(r, l)), None);
+/// ```
 pub fn cmp_by<T, L, R, F>(a: L, b: R, cmp: F) -> Option<Ordering>
 where
     L: IntoIterator<Item = T>,
@@ -70,6 +120,17 @@ fn cmp_fold<T>(init: Ordering, (next, _): (Ordering, T)) -> Option<Ordering> {
 /// This behaviour can be overridden by using [`union_by`](fn.union_by.html).
 ///
 /// Time complexity: `O(a.len() + b.len())`.
+///
+/// # Examples
+///
+/// ```
+/// use iter_set::union;
+///
+/// let a = [1, 2];
+/// let b = [2, 3];
+///
+/// assert!(union(&a, &b).eq(&[1, 2, 3]));
+/// ```
 pub fn union<T, L, R>(a: L, b: R) -> impl Iterator<Item = T>
 where
     T: Ord,
@@ -86,6 +147,39 @@ where
 /// to override the default behaviour of returning duplicate elements from `a`.
 ///
 /// See [`union`](fn.union.html).
+///
+/// # Examples
+///
+/// Using the comparator function to perform a 'deep union'
+///
+/// ```
+/// use std::cmp::Ordering::{self, Equal, Greater, Less};
+/// use iter_set::union_by;
+///
+/// #[derive(Debug, Eq, PartialEq)]
+/// enum Foo {
+///     Zero,
+///     Some(Vec<u32>),
+/// }
+///
+/// fn combine(l: &mut Foo, r: &mut Foo) -> Ordering {
+///     match (l, r) {
+///         (Foo::Zero, Foo::Zero) => Equal,
+///         (Foo::Zero, Foo::Some(_)) => Less,
+///         (Foo::Some(_), Foo::Zero) => Greater,
+///         (Foo::Some(l), Foo::Some(r)) => {
+///             l.append(r);
+///             Equal
+///         }
+///     }
+/// }
+///
+/// let lhs = vec![Foo::Zero, Foo::Some(vec![1, 2])];
+/// let rhs = vec![Foo::Some(vec![3])];
+///
+/// let union: Vec<_> = union_by(lhs, rhs, combine).collect();
+/// assert_eq!(union, vec![Foo::Zero, Foo::Some(vec![1, 2, 3])]);
+/// ```
 pub fn union_by<T, L, R, F>(a: L, b: R, cmp: F) -> impl Iterator<Item = T>
 where
     L: IntoIterator<Item = T>,
@@ -99,6 +193,17 @@ where
 /// function.
 ///
 /// See [`union`](fn.union.html).
+///
+/// # Examples
+///
+/// ```
+/// use iter_set::union_by_key;
+///
+/// let a = [(1, "a"), (2, "a")];
+/// let b = [(2, "b"), (3, "b")];
+///
+/// assert!(union_by_key(&a, &b, |&(key, _)| key).eq(&[(1, "a"), (2, "a"), (3, "b")]));
+/// ```
 pub fn union_by_key<T, L, R, K, F>(a: L, b: R, key: F) -> impl Iterator<Item = T>
 where
     L: IntoIterator<Item = T>,
@@ -111,9 +216,21 @@ where
 
 /// Take the intersection of two sets represented by sorted, deduplicated iterators.
 ///
-/// The elements returned will all be from `a`.
+/// The elements returned will all be from `a`. This behaviour can be overridden by
+/// using [`intersection_by`](fn.intersection_by.html).
 ///
 /// Time complexity: `O(a.len() + b.len())`.
+///
+/// # Examples
+///
+/// ```
+/// use iter_set::intersection;
+///
+/// let a = [1, 2];
+/// let b = [2, 3];
+///
+/// assert!(intersection(&a, &b).eq(&[2]));
+/// ```
 pub fn intersection<T, L, R>(a: L, b: R) -> impl Iterator<Item = T>
 where
     T: Ord,
@@ -125,7 +242,37 @@ where
 
 /// Compare two sets represented by sorted, deduplicated iterators, using a comparator function.
 ///
+/// Note that since this passes elements to the comparator function as `&mut T`, you can swap them
+/// to override the default behaviour of returning duplicate elements from `a`.
+///
 /// See [`intersection`](fn.intersection.html).
+///
+/// # Examples
+///
+/// Using the comparator function to choose which iterator to take from.
+///
+/// ```
+/// use std::cmp::Ordering::{self, Equal};
+/// use std::mem::swap;
+/// use iter_set::intersection_by;
+///
+/// let mut a = [(1, vec![2]), (2, vec![])];
+/// let mut b = [(2, vec![1]), (3, vec![])];
+///
+/// fn compare(l: &mut (u32, Vec<i32>), r: &mut (u32, Vec<i32>)) -> Ordering {
+///     match Ord::cmp(&l.0, &r.0) {
+///        Equal => {
+///            if r.1.len() > l.1.len() {
+///                swap(r, l);
+///            }
+///            Equal
+///        }
+///        neq => neq,
+///     }
+/// }
+///
+/// assert!(intersection_by(&mut a, &mut b, |l, r| compare(*l, *r)).eq(&[(2, vec![1])]));
+/// ```
 pub fn intersection_by<T, L, R, F>(a: L, b: R, cmp: F) -> impl Iterator<Item = T>
 where
     L: IntoIterator<Item = T>,
@@ -139,6 +286,17 @@ where
 /// extraction function.
 ///
 /// See [`intersection`](fn.intersection.html).
+///
+/// # Examples
+///
+/// ```
+/// use iter_set::intersection_by_key;
+///
+/// let a = [(1, "a"), (2, "a")];
+/// let b = [(2, "b"), (3, "b")];
+///
+/// assert!(intersection_by_key(&a, &b, |&(key, _)| key).eq(&[(2, "a")]));
+/// ```
 pub fn intersection_by_key<T, L, R, K, F>(a: L, b: R, key: F) -> impl Iterator<Item = T>
 where
     L: IntoIterator<Item = T>,
@@ -160,6 +318,17 @@ fn intersection_filter<T>((src, val): (Ordering, T)) -> Option<T> {
 /// deduplicated iterators.
 ///
 /// Time complexity: `O(a.len() + b.len())`.
+///
+/// # Examples
+///
+/// ```
+/// use iter_set::difference;
+///
+/// let a = [1, 2];
+/// let b = [2, 3];
+///
+/// assert!(difference(&a, &b).eq(&[1]));
+/// ```
 pub fn difference<T, L, R>(a: L, b: R) -> impl Iterator<Item = T>
 where
     T: Ord,
@@ -205,6 +374,17 @@ fn difference_filter<T>((src, val): (Ordering, T)) -> Option<T> {
 /// Take the symmetric_difference of two sets represented by sorted, deduplicated iterators.
 ///
 /// Time complexity: `O(a.len() + b.len())`.
+///
+/// # Examples
+///
+/// ```
+/// use iter_set::symmetric_difference;
+///
+/// let a = [1, 2];
+/// let b = [2, 3];
+///
+/// assert!(symmetric_difference(&a, &b).eq(&[1, 3]));
+/// ```
 pub fn symmetric_difference<T, L, R>(a: L, b: R) -> impl Iterator<Item = T>
 where
     T: Ord,
@@ -252,6 +432,18 @@ fn symmetric_difference_filter<T>((src, val): (Ordering, T)) -> Option<T> {
 /// * `Ordering::Less`: from `a`.
 /// * `Ordering::Equal`: from both `a` and `b`. (The element from `a` is returned)
 /// * `Ordering::Greater`: from `b`.
+///
+/// # Examples
+///
+/// ```
+/// use std::cmp::Ordering::{Equal, Greater, Less};
+/// use iter_set::classify;
+///
+/// let a = [1, 2];
+/// let b = [2, 3];
+///
+/// assert!(classify(&a, &b).eq(vec![(Greater, &1), (Equal, &2), (Less, &3)]));
+/// ```
 pub fn classify<T, L, R>(a: L, b: R) -> Classify<L::IntoIter, R::IntoIter>
 where
     T: Ord,
