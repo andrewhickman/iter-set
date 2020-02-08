@@ -108,10 +108,10 @@ where
     classify_by(a, b, cmp).try_fold(Ordering::Equal, cmp_fold)
 }
 
-fn cmp_fold<T>(init: Ordering, (next, _): (Ordering, T)) -> Option<Ordering> {
+fn cmp_fold<T>(init: Ordering, next: Inclusion<T>) -> Option<Ordering> {
     use Ordering::*;
 
-    match (init, next) {
+    match (init, next.ordering()) {
         (Less, Greater) | (Greater, Less) => None,
         (Equal, x) | (x, Equal) => Some(x),
         (Greater, Greater) => Some(Greater),
@@ -142,7 +142,7 @@ where
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
 {
-    classify(a, b).map(|(_, val)| val)
+    classify(a, b).map(Inclusion::union)
 }
 
 /// Take the union of two sets represented by sorted, deduplicated iterators, using a comparator
@@ -191,7 +191,7 @@ where
     R: IntoIterator<Item = T>,
     F: FnMut(&mut T, &mut T) -> Ordering,
 {
-    classify_by(a, b, cmp).map(|(_, val)| val)
+    classify_by(a, b, cmp).map(Inclusion::union)
 }
 
 /// Take the union of two sets represented by sorted, deduplicated iterators, using a key extraction
@@ -216,7 +216,7 @@ where
     K: Ord,
     F: FnMut(&T) -> K,
 {
-    classify_by_key(a, b, key).map(|(_, val)| val)
+    classify_by_key(a, b, key).map(Inclusion::union)
 }
 
 /// Take the intersection of two sets represented by sorted, deduplicated iterators.
@@ -242,7 +242,7 @@ where
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
 {
-    classify(a, b).filter_map(intersection_filter)
+    classify(a, b).filter_map(Inclusion::intersection)
 }
 
 /// Compare two sets represented by sorted, deduplicated iterators, using a comparator function.
@@ -284,7 +284,7 @@ where
     R: IntoIterator<Item = T>,
     F: FnMut(&mut T, &mut T) -> Ordering,
 {
-    classify_by(a, b, cmp).filter_map(intersection_filter)
+    classify_by(a, b, cmp).filter_map(Inclusion::intersection)
 }
 
 /// Take the intersection of two sets represented by sorted, deduplicated iterators, using a key
@@ -309,14 +309,7 @@ where
     K: Ord,
     F: FnMut(&T) -> K,
 {
-    classify_by_key(a, b, key).filter_map(intersection_filter)
-}
-
-fn intersection_filter<T>((src, val): (Ordering, T)) -> Option<T> {
-    match src {
-        Ordering::Equal => Some(val),
-        Ordering::Greater | Ordering::Less => None,
-    }
+    classify_by_key(a, b, key).filter_map(Inclusion::intersection)
 }
 
 /// Take the difference of two sets (elements in `a` but not in `b`) represented by sorted,
@@ -340,7 +333,7 @@ where
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
 {
-    classify(a, b).filter_map(difference_filter)
+    classify(a, b).filter_map(Inclusion::difference)
 }
 
 /// Compare two sets represented by sorted, deduplicated iterators, using a comparator function.
@@ -352,7 +345,7 @@ where
     R: IntoIterator<Item = T>,
     F: FnMut(&mut T, &mut T) -> Ordering,
 {
-    classify_by(a, b, cmp).filter_map(difference_filter)
+    classify_by(a, b, cmp).filter_map(Inclusion::difference)
 }
 
 /// Take the difference of two sets represented by sorted, deduplicated iterators, using a key
@@ -366,14 +359,7 @@ where
     K: Ord,
     F: FnMut(&T) -> K,
 {
-    classify_by_key(a, b, key).filter_map(difference_filter)
-}
-
-fn difference_filter<T>((src, val): (Ordering, T)) -> Option<T> {
-    match src {
-        Ordering::Less | Ordering::Equal => None,
-        Ordering::Greater => Some(val),
-    }
+    classify_by_key(a, b, key).filter_map(Inclusion::difference)
 }
 
 /// Take the symmetric_difference of two sets represented by sorted, deduplicated iterators.
@@ -396,7 +382,7 @@ where
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
 {
-    classify(a, b).filter_map(symmetric_difference_filter)
+    classify(a, b).filter_map(Inclusion::symmetric_difference)
 }
 
 /// Compare two sets represented by sorted, deduplicated iterators, using a comparator function.
@@ -408,7 +394,7 @@ where
     R: IntoIterator<Item = T>,
     F: FnMut(&mut T, &mut T) -> Ordering,
 {
-    classify_by(a, b, cmp).filter_map(symmetric_difference_filter)
+    classify_by(a, b, cmp).filter_map(Inclusion::symmetric_difference)
 }
 
 /// Take the symmetric_difference of two sets represented by sorted, deduplicated iterators, using a
@@ -422,32 +408,21 @@ where
     K: Ord,
     F: FnMut(&T) -> K,
 {
-    classify_by_key(a, b, key).filter_map(symmetric_difference_filter)
-}
-
-fn symmetric_difference_filter<T>((src, val): (Ordering, T)) -> Option<T> {
-    match src {
-        Ordering::Less | Ordering::Greater => Some(val),
-        Ordering::Equal => None,
-    }
+    classify_by_key(a, b, key).filter_map(Inclusion::symmetric_difference)
 }
 
 /// Interleave two sorted, deduplicated iterators in sorted order and classify each element according
-/// to its source:
-/// * `Ordering::Less`: from `b`.
-/// * `Ordering::Equal`: from both `a` and `b`. (The element from `a` is returned)
-/// * `Ordering::Greater`: from `a`.
+/// to its source.
 ///
 /// # Examples
 ///
 /// ```
-/// use std::cmp::Ordering::{Equal, Greater, Less};
-/// use iter_set::classify;
+/// use iter_set::{classify, Inclusion};
 ///
 /// let a = [1, 2];
 /// let b = [2, 3];
 ///
-/// assert!(classify(&a, &b).eq(vec![(Greater, &1), (Equal, &2), (Less, &3)]));
+/// assert!(classify(&a, &b).eq(vec![Inclusion::Left(&1), Inclusion::Both(&2, &2), Inclusion::Right(&3)]));
 /// ```
 pub fn classify<T, L, R>(a: L, b: R) -> Classify<L::IntoIter, R::IntoIter>
 where
@@ -505,8 +480,8 @@ where
     L: Iterator,
     R: Iterator,
 {
-    lhs: Peekable<L>,
-    rhs: Peekable<R>,
+    lhs: PutBack<L>,
+    rhs: PutBack<R>,
 }
 
 impl<T, L, R> Classify<L, R>
@@ -519,34 +494,31 @@ where
         rhs: impl IntoIterator<IntoIter = R, Item = T>,
     ) -> Self {
         Classify {
-            lhs: Peekable::new(lhs.into_iter()),
-            rhs: Peekable::new(rhs.into_iter()),
+            lhs: PutBack::new(lhs.into_iter()),
+            rhs: PutBack::new(rhs.into_iter()),
         }
     }
 
-    fn next_by<F>(&mut self, mut cmp: F) -> Option<(Ordering, T)>
+    fn next_by<F>(&mut self, mut cmp: F) -> Option<Inclusion<T>>
     where
         F: FnMut(&mut T, &mut T) -> Ordering,
     {
-        use Ordering::*;
-
-        let src = match (self.lhs.peek(), self.rhs.peek()) {
-            (Some(l), Some(r)) => cmp(l, r).reverse(),
-            (None, Some(_)) => Less,
-            (Some(_), None) => Greater,
+        match (self.lhs.next(), self.rhs.next()) {
+            (Some(mut l), Some(mut r)) => match cmp(&mut l, &mut r) {
+                Ordering::Less => {
+                    self.rhs.put_back(r);
+                    Some(Inclusion::Left(l))
+                }
+                Ordering::Equal => Some(Inclusion::Both(l, r)),
+                Ordering::Greater => {
+                    self.lhs.put_back(l);
+                    Some(Inclusion::Right(r))
+                }
+            },
+            (Some(l), None) => Some(Inclusion::Left(l)),
+            (None, Some(r)) => Some(Inclusion::Right(r)),
             (None, None) => return None,
-        };
-
-        let val = match src {
-            Ordering::Greater => self.lhs.peek.take(),
-            Ordering::Less => self.rhs.peek.take(),
-            Ordering::Equal => {
-                self.rhs.peek.take();
-                self.lhs.peek.take()
-            }
-        };
-
-        val.map(|v| (src, v))
+        }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -561,13 +533,72 @@ where
     }
 }
 
+/// The sets an element is included in.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Inclusion<T> {
+    // The element is in the left set only.
+    Left(T),
+    // The element is in both sets.
+    Both(T, T),
+    // The element is in the right set only.
+    Right(T),
+}
+
+impl<T> Inclusion<T> {
+    /// Return the element, whichever set it is in. If it is in both sets, the left element is returned.
+    fn union(self) -> T {
+        match self {
+            Inclusion::Left(l) => l,
+            Inclusion::Both(l, _) => l,
+            Inclusion::Right(r) => r,
+        }
+    }
+
+    /// Return the element if it is in both sets. The left element is returned.
+    fn intersection(self) -> Option<T> {
+        match self {
+            Inclusion::Left(_) | Inclusion::Right(_) => None,
+            Inclusion::Both(l, _) => Some(l),
+        }
+    }
+
+    /// Return the element if it is in the left set.
+    fn difference(self) -> Option<T> {
+        match self {
+            Inclusion::Left(l) => Some(l),
+            Inclusion::Both(_, _) | Inclusion::Right(_) => None,
+        }
+    }
+
+    /// Return the element if it is in exactly one set.
+    fn symmetric_difference(self) -> Option<T> {
+        match self {
+            Inclusion::Left(l) => Some(l),
+            Inclusion::Both(_, _) => None,
+            Inclusion::Right(r) => Some(r),
+        }
+    }
+
+    /// Return an ordering based on where the element is from.
+    /// * `Ordering::Less`: from the right set.
+    /// * `Ordering::Equal`: from both sets
+    /// * `Ordering::Greater`: from the left set.
+    fn ordering(&self) -> Ordering {
+        match self {
+            Inclusion::Left(_) => Ordering::Greater,
+            Inclusion::Both(_, _) => Ordering::Equal,
+            Inclusion::Right(_) => Ordering::Less,
+        }
+    }
+}
+
 impl<T, L, R> Iterator for Classify<L, R>
 where
     T: Ord,
     L: Iterator<Item = T>,
     R: Iterator<Item = T>,
 {
-    type Item = (Ordering, T);
+    type Item = Inclusion<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.next_by(|l, r| Ord::cmp(l, r))
@@ -598,7 +629,7 @@ where
     R: Iterator<Item = T>,
     F: FnMut(&mut T, &mut T) -> Ordering,
 {
-    type Item = (Ordering, T);
+    type Item = Inclusion<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next_by(&mut self.cmp)
@@ -630,7 +661,7 @@ where
     K: Ord,
     F: FnMut(&T) -> K,
 {
-    type Item = (Ordering, T);
+    type Item = Inclusion<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let key = &mut self.key;
@@ -642,21 +673,31 @@ where
     }
 }
 
-struct Peekable<I: Iterator> {
+struct PutBack<I: Iterator> {
     iter: I,
-    peek: Option<I::Item>,
+    next: Option<I::Item>,
 }
 
-impl<I: Iterator> Peekable<I> {
+impl<I: Iterator> PutBack<I> {
     fn new(iter: I) -> Self {
-        Peekable { iter, peek: None }
+        PutBack { iter, next: None }
     }
 
-    fn peek(&mut self) -> Option<&mut I::Item> {
-        if self.peek.is_none() {
-            self.peek = self.iter.next();
+    fn put_back(&mut self, item: I::Item) {
+        debug_assert!(self.next.is_none());
+        self.next = Some(item);
+    }
+}
+
+impl<I: Iterator> Iterator for PutBack<I> {
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.next.is_some() {
+            self.next.take()
+        } else {
+            self.iter.next()
         }
-        self.peek.as_mut()
     }
 }
 
