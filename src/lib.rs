@@ -1,6 +1,6 @@
 #![no_std]
 #![deny(missing_debug_implementations, missing_copy_implementations)]
-#![doc(html_root_url = "https://docs.rs/log/2.0.0")]
+#![doc(html_root_url = "https://docs.rs/log/2.0.1")]
 
 //! This crate provides set operations on sorted, deduplicated iterators. Unless otherwise
 //! specified, all iterator parameters in this crate should yield elements in ascending order with
