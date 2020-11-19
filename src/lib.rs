@@ -52,7 +52,7 @@ where
 
 /// Compare two sets represented by sorted, deduplicated iterators, using a key extraction function.
 ///
-/// See [`cmp`](fn.cmp.html).
+/// See [`cmp()`].
 ///
 /// # Examples
 ///
@@ -81,7 +81,7 @@ where
 
 /// Compare two sets represented by sorted, deduplicated iterators, using a comparator function.
 ///
-/// See [`cmp`](fn.cmp.html).
+/// See [`cmp()`].
 ///
 /// # Examples
 ///
@@ -123,7 +123,7 @@ fn cmp_fold<T>(init: Ordering, next: Inclusion<T>) -> Option<Ordering> {
 /// Take the union of two sets represented by sorted, deduplicated iterators.
 ///
 /// If an element is in both iterators, then only the one from `a` is yielded.
-/// This behaviour can be overridden by using [`union_by`](fn.union_by.html).
+/// This behaviour can be overridden by using [`union_by()`].
 ///
 /// Time complexity: `O(a.len() + b.len())`.
 ///
@@ -152,7 +152,7 @@ where
 /// Note that since this passes elements to the comparator function as `&mut T`, you can swap them
 /// to override the default behaviour of returning duplicate elements from `a`.
 ///
-/// See [`union`](fn.union.html).
+/// See [`union()`].
 ///
 /// # Examples
 ///
@@ -198,7 +198,7 @@ where
 /// Take the union of two sets represented by sorted, deduplicated iterators, using a key extraction
 /// function.
 ///
-/// See [`union`](fn.union.html).
+/// See [`union()`].
 ///
 /// # Examples
 ///
@@ -223,7 +223,7 @@ where
 /// Take the intersection of two sets represented by sorted, deduplicated iterators.
 ///
 /// The elements returned will all be from `a`. This behaviour can be overridden by
-/// using [`intersection_by`](fn.intersection_by.html).
+/// using [`intersection_by()`].
 ///
 /// Time complexity: `O(a.len() + b.len())`.
 ///
@@ -252,7 +252,7 @@ where
 /// Note that since this passes elements to the comparator function as `&mut T`, you can swap them
 /// to override the default behaviour of returning duplicate elements from `a`.
 ///
-/// See [`intersection`](fn.intersection.html).
+/// See [`intersection()`].
 ///
 /// # Examples
 ///
@@ -292,7 +292,7 @@ where
 /// Take the intersection of two sets represented by sorted, deduplicated iterators, using a key
 /// extraction function.
 ///
-/// See [`intersection`](fn.intersection.html).
+/// See [`intersection()`].
 ///
 /// # Examples
 ///
@@ -341,7 +341,7 @@ where
 /// Take the difference of two sets represented by sorted, deduplicated iterators, using 
 /// a comparator function.
 ///
-/// See [`difference`](fn.intersection.html).
+/// See [`difference()`].
 pub fn difference_by<T, L, R, F>(a: L, b: R, cmp: F) -> impl Iterator<Item = T>
 where
     L: IntoIterator<Item = T>,
@@ -354,7 +354,7 @@ where
 /// Take the difference of two sets represented by sorted, deduplicated iterators, using a key
 /// extraction function.
 ///
-/// See [`difference`](fn.intersection.html).
+/// See [`difference()`].
 pub fn difference_by_key<T, L, R, K, F>(a: L, b: R, key: F) -> impl Iterator<Item = T>
 where
     L: IntoIterator<Item = T>,
@@ -391,7 +391,7 @@ where
 /// Take the symmetric_difference of two sets represented by sorted, deduplicated iterators, 
 /// using a comparator function.
 ///
-/// See [`symmetric_difference`](fn.intersection.html).
+/// See [`symmetric_difference()`].
 pub fn symmetric_difference_by<T, L, R, F>(a: L, b: R, cmp: F) -> impl Iterator<Item = T>
 where
     L: IntoIterator<Item = T>,
@@ -404,7 +404,7 @@ where
 /// Take the symmetric_difference of two sets represented by sorted, deduplicated iterators, using a
 /// key extraction function.
 ///
-/// See [`symmetric_difference`](fn.intersection.html).
+/// See [`symmetric_difference()`].
 pub fn symmetric_difference_by_key<T, L, R, K, F>(a: L, b: R, key: F) -> impl Iterator<Item = T>
 where
     L: IntoIterator<Item = T>,
@@ -440,7 +440,7 @@ where
 /// Interleave two sorted, deduplicated iterators in sorted order and classify each element according
 /// to its source, using a comparator function.
 ///
-/// See [`classify`](fn.classify.html).
+/// See [`classify()`].
 pub fn classify_by<T, L, R, F>(a: L, b: R, cmp: F) -> ClassifyBy<L::IntoIter, R::IntoIter, F>
 where
     L: IntoIterator<Item = T>,
@@ -456,7 +456,7 @@ where
 /// Interleave two sorted, deduplicated iterators in sorted order and classify each element according
 /// to its source, using a key extraction function.
 ///
-/// See [`classify`](fn.classify.html).
+/// See [`classify()`].
 pub fn classify_by_key<T, L, R, K, F>(
     a: L,
     b: R,
@@ -477,7 +477,7 @@ where
 /// An iterator that interleaves two sorted, deduplicated iterators in sorted order and classifies
 /// each element according to its source.
 ///
-/// This `struct` is created by the [`classify`](fn.classify.html) function. See its documentation
+/// This `struct` is created by the [`classify()`] function. See its documentation
 /// for more.
 pub struct Classify<L, R>
 where
@@ -550,7 +550,7 @@ pub enum Inclusion<T> {
 
 impl<T> Inclusion<T> {
     /// Return the element, whichever set it is in. If it is in both sets, the left element is returned.
-    fn union(self) -> T {
+    pub fn union(self) -> T {
         match self {
             Inclusion::Left(l) => l,
             Inclusion::Both(l, _) => l,
@@ -559,7 +559,7 @@ impl<T> Inclusion<T> {
     }
 
     /// Return the element if it is in both sets. The left element is returned.
-    fn intersection(self) -> Option<T> {
+    pub fn intersection(self) -> Option<T> {
         match self {
             Inclusion::Left(_) | Inclusion::Right(_) => None,
             Inclusion::Both(l, _) => Some(l),
@@ -567,7 +567,7 @@ impl<T> Inclusion<T> {
     }
 
     /// Return the element if it is in the left set.
-    fn difference(self) -> Option<T> {
+    pub fn difference(self) -> Option<T> {
         match self {
             Inclusion::Left(l) => Some(l),
             Inclusion::Both(_, _) | Inclusion::Right(_) => None,
@@ -575,7 +575,7 @@ impl<T> Inclusion<T> {
     }
 
     /// Return the element if it is in exactly one set.
-    fn symmetric_difference(self) -> Option<T> {
+    pub fn symmetric_difference(self) -> Option<T> {
         match self {
             Inclusion::Left(l) => Some(l),
             Inclusion::Both(_, _) => None,
@@ -583,11 +583,11 @@ impl<T> Inclusion<T> {
         }
     }
 
-    /// Return an ordering based on where the element is from.
+    /// Return an [`Ordering`] based on where the element is from.
     /// * `Ordering::Less`: from the right set.
     /// * `Ordering::Equal`: from both sets
     /// * `Ordering::Greater`: from the left set.
-    fn ordering(&self) -> Ordering {
+    pub fn ordering(&self) -> Ordering {
         match self {
             Inclusion::Left(_) => Ordering::Greater,
             Inclusion::Both(_, _) => Ordering::Equal,
@@ -616,7 +616,7 @@ where
 /// An iterator that interleaves two sorted, deduplicated iterators in sorted order and classifies
 /// each element according to its source, using a comparator function.
 ///
-/// This `struct` is created by the [`classify_by`](fn.classify_by.html) function. See its
+/// This `struct` is created by the [`classify_by()`] function. See its
 /// documentation for more.
 pub struct ClassifyBy<L, R, F>
 where
@@ -647,7 +647,7 @@ where
 /// An iterator that interleaves two sorted, deduplicated iterators in sorted order and classifies
 /// each element according to its source, using a key extraction function.
 ///
-/// This `struct` is created by the [`classify_by_key`](fn.classify_by_key.html) function. See its
+/// This `struct` is created by the [`classify_by_key()`] function. See its
 /// documentation for more.
 pub struct ClassifyByKey<L, R, F>
 where
