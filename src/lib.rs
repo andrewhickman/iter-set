@@ -18,10 +18,11 @@ use core::fmt::{self, Debug};
 
 /// Compare two sets represented by sorted, deduplicated iterators.
 ///
-/// If the iterators are equal, then `Some(Equal)` is returned. If `a` is a subset of `b` then
-/// `Some(Less)` is returned. If `a` is a superset of `b` then `Some(Greater)` is returned.
-/// Otherwise, `None` is returned. If `a` and `b` are not sorted or contain duplicate values,
-/// the return value is unspecified.
+/// The return value represents a partial ordering based on set inclusion. If the iterators 
+/// are equal, then `Some(Equal)` is returned. If `a` is a subset of `b` then `Some(Less)` 
+/// is returned. If `a` is a superset of `b` then `Some(Greater)` is returned. Otherwise, 
+/// `None` is returned. If `a` and `b` are not sorted or contain duplicate values, the return 
+/// value is unspecified.
 ///
 /// Time complexity: `O(a.len() + b.len())`.
 ///
@@ -245,7 +246,8 @@ where
     classify(a, b).filter_map(Inclusion::intersection)
 }
 
-/// Compare two sets represented by sorted, deduplicated iterators, using a comparator function.
+/// Take the intersection of two sets represented by sorted, deduplicated iterators, using a 
+/// comparator function.
 ///
 /// Note that since this passes elements to the comparator function as `&mut T`, you can swap them
 /// to override the default behaviour of returning duplicate elements from `a`.
@@ -336,7 +338,8 @@ where
     classify(a, b).filter_map(Inclusion::difference)
 }
 
-/// Compare two sets represented by sorted, deduplicated iterators, using a comparator function.
+/// Take the difference of two sets represented by sorted, deduplicated iterators, using 
+/// a comparator function.
 ///
 /// See [`difference`](fn.intersection.html).
 pub fn difference_by<T, L, R, F>(a: L, b: R, cmp: F) -> impl Iterator<Item = T>
@@ -385,7 +388,8 @@ where
     classify(a, b).filter_map(Inclusion::symmetric_difference)
 }
 
-/// Compare two sets represented by sorted, deduplicated iterators, using a comparator function.
+/// Take the symmetric_difference of two sets represented by sorted, deduplicated iterators, 
+/// using a comparator function.
 ///
 /// See [`symmetric_difference`](fn.intersection.html).
 pub fn symmetric_difference_by<T, L, R, F>(a: L, b: R, cmp: F) -> impl Iterator<Item = T>
