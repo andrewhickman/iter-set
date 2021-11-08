@@ -1,7 +1,7 @@
 [package]
 name = "iter-set"
 description = "Set operations on sorted, deduplicated iterators."
-version = "2.0.1"
+version = "2.0.2"
 authors = ["Andrew Hickman <andrew.hickman1@sky.com>"]
 repository = "https://github.com/andrewhickman/iter-set"
 documentation = "https://docs.rs/iter-set"
