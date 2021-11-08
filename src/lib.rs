@@ -18,10 +18,10 @@ use core::fmt::{self, Debug};
 
 /// Compare two sets represented by sorted, deduplicated iterators.
 ///
-/// The return value represents a partial ordering based on set inclusion. If the iterators 
-/// are equal, then `Some(Equal)` is returned. If `a` is a subset of `b` then `Some(Less)` 
-/// is returned. If `a` is a superset of `b` then `Some(Greater)` is returned. Otherwise, 
-/// `None` is returned. If `a` and `b` are not sorted or contain duplicate values, the return 
+/// The return value represents a partial ordering based on set inclusion. If the iterators
+/// are equal, then `Some(Equal)` is returned. If `a` is a subset of `b` then `Some(Less)`
+/// is returned. If `a` is a superset of `b` then `Some(Greater)` is returned. Otherwise,
+/// `None` is returned. If `a` and `b` are not sorted or contain duplicate values, the return
 /// value is unspecified.
 ///
 /// Time complexity: `O(a.len() + b.len())`.
@@ -246,7 +246,7 @@ where
     classify(a, b).filter_map(Inclusion::intersection)
 }
 
-/// Take the intersection of two sets represented by sorted, deduplicated iterators, using a 
+/// Take the intersection of two sets represented by sorted, deduplicated iterators, using a
 /// comparator function.
 ///
 /// Note that since this passes elements to the comparator function as `&mut T`, you can swap them
@@ -338,7 +338,7 @@ where
     classify(a, b).filter_map(Inclusion::difference)
 }
 
-/// Take the difference of two sets represented by sorted, deduplicated iterators, using 
+/// Take the difference of two sets represented by sorted, deduplicated iterators, using
 /// a comparator function.
 ///
 /// See [`difference()`].
@@ -388,7 +388,7 @@ where
     classify(a, b).filter_map(Inclusion::symmetric_difference)
 }
 
-/// Take the symmetric_difference of two sets represented by sorted, deduplicated iterators, 
+/// Take the symmetric_difference of two sets represented by sorted, deduplicated iterators,
 /// using a comparator function.
 ///
 /// See [`symmetric_difference()`].
