@@ -146,6 +146,46 @@ fn test_symmetric_difference() {
 }
 
 #[test]
+fn test_classify_size_hint_lower() {
+    let lhs = [1, 2, 3];
+    let rhs = [1, 2, 3, 4];
+
+    let mut classify = classify(&lhs, &rhs);
+
+    let (lo, hi) = classify.size_hint();
+    assert_eq!(lo, 4);
+    assert_eq!(hi, Some(7));
+
+    assert_eq!(classify.next(), Some(Inclusion::Both(&1, &1)));
+
+    let (lo, hi) = classify.size_hint();
+    assert_eq!(lo, 3);
+    assert_eq!(hi, Some(5));
+
+    assert_eq!(classify.count(), 3);
+}
+
+#[test]
+fn test_classify_size_hint_upper() {
+    let lhs = [1, 3, 5];
+    let rhs = [2, 4, 6, 7];
+
+    let mut classify = classify(&lhs, &rhs);
+
+    let (lo, hi) = classify.size_hint();
+    assert_eq!(lo, 4);
+    assert_eq!(hi, Some(7));
+
+    assert_eq!(classify.next(), Some(Inclusion::Left(&1)));
+
+    let (lo, hi) = classify.size_hint();
+    assert_eq!(lo, 4);
+    assert_eq!(hi, Some(6));
+
+    assert_eq!(classify.count(), 6);
+}
+
+#[test]
 fn test_combine() {
     use std::cmp::Ordering;
 

@@ -10,11 +10,14 @@
 #[cfg(test)]
 extern crate std;
 
+mod put_back;
 #[cfg(test)]
 mod tests;
 
 use core::cmp::{self, Ordering};
 use core::fmt::{self, Debug};
+
+use self::put_back::PutBack;
 
 /// Compare two sets represented by sorted, deduplicated iterators.
 ///
@@ -538,8 +541,8 @@ where
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let (lmin, lmax) = self.lhs.iter.size_hint();
-        let (rmin, rmax) = self.rhs.iter.size_hint();
+        let (lmin, lmax) = self.lhs.size_hint();
+        let (rmin, rmax) = self.rhs.size_hint();
         let min = cmp::max(lmin, rmin);
         let max = match (lmax, rmax) {
             (Some(lmax), Some(rmax)) => lmax.checked_add(rmax),
@@ -689,34 +692,6 @@ where
     }
 }
 
-struct PutBack<I: Iterator> {
-    iter: I,
-    next: Option<I::Item>,
-}
-
-impl<I: Iterator> PutBack<I> {
-    fn new(iter: I) -> Self {
-        PutBack { iter, next: None }
-    }
-
-    fn put_back(&mut self, item: I::Item) {
-        debug_assert!(self.next.is_none());
-        self.next = Some(item);
-    }
-}
-
-impl<I: Iterator> Iterator for PutBack<I> {
-    type Item = I::Item;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.next.is_some() {
-            self.next.take()
-        } else {
-            self.iter.next()
-        }
-    }
-}
-
 impl<L, R> Debug for Classify<L, R>
 where
     L: Debug + Iterator,
@@ -724,8 +699,8 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Classify")
-            .field("lhs", &self.lhs.iter)
-            .field("rhs", &self.rhs.iter)
+            .field("lhs", &self.lhs)
+            .field("rhs", &self.rhs)
             .finish()
     }
 }
@@ -737,8 +712,8 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("ClassifyBy")
-            .field("lhs", &self.inner.lhs.iter)
-            .field("rhs", &self.inner.rhs.iter)
+            .field("lhs", &self.inner.lhs)
+            .field("rhs", &self.inner.rhs)
             .finish()
     }
 }
@@ -750,8 +725,8 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("ClassifyByKey")
-            .field("lhs", &self.inner.lhs.iter)
-            .field("rhs", &self.inner.rhs.iter)
+            .field("lhs", &self.inner.lhs)
+            .field("rhs", &self.inner.rhs)
             .finish()
     }
 }
@@ -801,8 +776,8 @@ where
     L: Iterator,
     R: Iterator,
 {
-    let (_, lmax) = classify.lhs.iter.size_hint();
-    let (_, rmax) = classify.rhs.iter.size_hint();
+    let (_, lmax) = classify.lhs.size_hint();
+    let (_, rmax) = classify.rhs.size_hint();
 
     let max = match (lmax, rmax) {
         (Some(l), Some(r)) => Some(l.min(r)),
@@ -817,6 +792,6 @@ where
     L: Iterator,
     R: Iterator,
 {
-    let (_, lmax) = classify.lhs.iter.size_hint();
+    let (_, lmax) = classify.lhs.size_hint();
     (0, lmax)
 }
