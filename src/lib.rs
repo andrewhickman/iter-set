@@ -243,7 +243,9 @@ where
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
 {
-    classify(a, b).filter_map(Inclusion::intersection)
+    classify(a, b)
+        .with_size_hint(intersection_size_hint)
+        .filter_map(Inclusion::intersection)
 }
 
 /// Take the intersection of two sets represented by sorted, deduplicated iterators, using a 
@@ -286,7 +288,9 @@ where
     R: IntoIterator<Item = T>,
     F: FnMut(&mut T, &mut T) -> Ordering,
 {
-    classify_by(a, b, cmp).filter_map(Inclusion::intersection)
+    classify_by(a, b, cmp)
+        .with_size_hint(|iter| intersection_size_hint(&iter.inner))
+        .filter_map(Inclusion::intersection)
 }
 
 /// Take the intersection of two sets represented by sorted, deduplicated iterators, using a key
@@ -311,7 +315,9 @@ where
     K: Ord,
     F: FnMut(&T) -> K,
 {
-    classify_by_key(a, b, key).filter_map(Inclusion::intersection)
+    classify_by_key(a, b, key)
+        .with_size_hint(|iter| intersection_size_hint(&iter.inner))
+        .filter_map(Inclusion::intersection)
 }
 
 /// Take the difference of two sets (elements in `a` but not in `b`) represented by sorted,
@@ -335,7 +341,9 @@ where
     L: IntoIterator<Item = T>,
     R: IntoIterator<Item = T>,
 {
-    classify(a, b).filter_map(Inclusion::difference)
+    classify(a, b)
+        .with_size_hint(difference_size_hint)
+        .filter_map(Inclusion::difference)
 }
 
 /// Take the difference of two sets represented by sorted, deduplicated iterators, using 
@@ -348,7 +356,9 @@ where
     R: IntoIterator<Item = T>,
     F: FnMut(&mut T, &mut T) -> Ordering,
 {
-    classify_by(a, b, cmp).filter_map(Inclusion::difference)
+    classify_by(a, b, cmp)
+        .with_size_hint(|iter| difference_size_hint(&iter.inner))
+        .filter_map(Inclusion::difference)
 }
 
 /// Take the difference of two sets represented by sorted, deduplicated iterators, using a key
@@ -362,7 +372,9 @@ where
     K: Ord,
     F: FnMut(&T) -> K,
 {
-    classify_by_key(a, b, key).filter_map(Inclusion::difference)
+    classify_by_key(a, b, key)
+        .with_size_hint(|iter| difference_size_hint(&iter.inner))
+        .filter_map(Inclusion::difference)
 }
 
 /// Take the symmetric_difference of two sets represented by sorted, deduplicated iterators.
@@ -742,4 +754,69 @@ where
             .field("rhs", &self.inner.rhs.iter)
             .finish()
     }
+}
+
+struct SizeHintIterator<I, F> {
+    iter: I,
+    f: F,
+}
+
+impl<I, F> Iterator for SizeHintIterator<I, F>
+where
+    I: Iterator,
+    F: Fn(&I) -> (usize, Option<usize>),
+{
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.f)(&self.iter)
+    }
+}
+
+trait WithSizeHint
+where
+    Self: Sized + Iterator,
+{
+    fn with_size_hint<F>(self, f: F) -> SizeHintIterator<Self, F>
+    where
+        F: Fn(&Self) -> (usize, Option<usize>),
+    {
+        SizeHintIterator { iter: self, f }
+    }
+}
+
+impl<I> WithSizeHint for I
+where
+    Self: Sized,
+    I: Iterator,
+{
+}
+
+fn intersection_size_hint<L, R>(classify: &Classify<L, R>) -> (usize, Option<usize>)
+where
+    L: Iterator,
+    R: Iterator,
+{
+    let (_, lmax) = classify.lhs.iter.size_hint();
+    let (_, rmax) = classify.rhs.iter.size_hint();
+
+    let max = match (lmax, rmax) {
+        (Some(l), Some(r)) => Some(l.min(r)),
+        (_, _) => None,
+    };
+
+    (0, max)
+}
+
+fn difference_size_hint<L, R>(classify: &Classify<L, R>) -> (usize, Option<usize>)
+where
+    L: Iterator,
+    R: Iterator,
+{
+    let (_, lmax) = classify.lhs.iter.size_hint();
+    (0, lmax)
 }
