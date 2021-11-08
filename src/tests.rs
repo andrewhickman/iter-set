@@ -65,11 +65,19 @@ fn test_intersection() {
     fn slice_intersection(a: &[u32], b: &[u32]) -> Vec<u32> {
         intersection(a, b).cloned().collect()
     }
+    fn intersection_size_max(a: &[u32], b: &[u32]) -> Option<usize> {
+        intersection(a, b).size_hint().1
+    }
 
     assert_eq!(slice_intersection(&[1, 2], &[1, 2]), vec![1, 2]);
     assert_eq!(slice_intersection(&[1], &[1, 2]), vec![1]);
     assert_eq!(slice_intersection(&[1, 2, 3], &[1, 2]), vec![1, 2]);
     assert_eq!(slice_intersection(&[1, 2, 3], &[1, 2, 4]), vec![1, 2]);
+
+    assert_eq!(intersection_size_max(&[1, 2], &[1, 2]), Some(2));
+    assert_eq!(intersection_size_max(&[1], &[1, 2]), Some(1));
+    assert_eq!(intersection_size_max(&[1, 2, 3], &[1, 2]), Some(2));
+    assert_eq!(intersection_size_max(&[1, 2, 3], &[1, 2, 4]), Some(3));
 
     for i in 0..(1u32 << BITS) {
         for j in 0..(1u32 << BITS) {
@@ -87,11 +95,19 @@ fn test_difference() {
     fn slice_difference(a: &[u32], b: &[u32]) -> Vec<u32> {
         difference(a, b).cloned().collect()
     }
+    fn difference_size_max(a: &[u32], b: &[u32]) -> Option<usize> {
+        difference(a, b).size_hint().1
+    }
 
     assert_eq!(slice_difference(&[1, 2], &[1, 2]), vec![]);
     assert_eq!(slice_difference(&[1, 2], &[1]), vec![2]);
     assert_eq!(slice_difference(&[1, 2, 3], &[1, 2]), vec![3]);
     assert_eq!(slice_difference(&[1, 2, 3], &[1, 2, 4]), vec![3]);
+
+    assert_eq!(difference_size_max(&[1, 2], &[1, 2]), Some(2));
+    assert_eq!(difference_size_max(&[1], &[1, 2]), Some(1));
+    assert_eq!(difference_size_max(&[1, 2, 3], &[1, 2]), Some(3));
+    assert_eq!(difference_size_max(&[1, 2, 3], &[1, 2, 4]), Some(3));
 
     for i in 0..(1u32 << BITS) {
         for j in 0..(1u32 << BITS) {
