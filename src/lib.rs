@@ -521,7 +521,7 @@ where
             },
             (Some(l), None) => Some(Inclusion::Left(l)),
             (None, Some(r)) => Some(Inclusion::Right(r)),
-            (None, None) => return None,
+            (None, None) => None,
         }
     }
 
